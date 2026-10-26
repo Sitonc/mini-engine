@@ -1,10 +1,19 @@
+#include "Benchmark.h"
 #include "Window.h"
 #include "Log.h"
 #include <chrono>
+#include <cstdint>
+#include <cstring>
 #include <exception>
 
-int main()
+int main(int argc, char** argv)
 {
+    if (argc > 1 && std::strcmp(argv[1], "--bench") == 0)
+    {
+        RunAllocatorBenchmark();
+        return 0;
+    }
+
     try
     {
         Window window("Mini Engine", 1280, 720);
