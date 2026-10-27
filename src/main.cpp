@@ -1,4 +1,5 @@
 #include "Benchmark.h"
+#include "EcsBenchmark.h"
 #include "Window.h"
 #include "Log.h"
 #include <chrono>
@@ -11,6 +12,12 @@ int main(int argc, char** argv)
     if (argc > 1 && std::strcmp(argv[1], "--bench") == 0)
     {
         RunAllocatorBenchmark();
+        return 0;
+    }
+
+    if (argc > 1 && std::strcmp(argv[1], "--ecs") == 0)
+    {
+        RunEcsBenchmark();
         return 0;
     }
 

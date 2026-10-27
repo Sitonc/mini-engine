@@ -20,7 +20,8 @@ add_executable(mini_engine
     src/main.cpp
     src/Window.cpp
     src/Benchmark.cpp
- "src/LinearAllocator.h" "src/PoolAllocator.h" "src/Benchmark.h" "src/Benchmark.cpp")
+    src/EcsBenchmark.cpp
+ "src/LinearAllocator.h" "src/PoolAllocator.h" "src/Benchmark.h" "src/Benchmark.cpp" "src/Ecs.h" "src/EcsBenchmark.h" "src/EcsBenchmark.cpp")
 
 target_include_directories(mini_engine PRIVATE ${sdl3_SOURCE_DIR}/include)
 target_link_libraries(mini_engine PRIVATE SDL3::SDL3-static)
