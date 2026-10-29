@@ -26,8 +26,11 @@ add_executable(mini_engine
     src/Benchmark.cpp
     src/EcsBenchmark.cpp
     src/SceneLoader.cpp
- "src/LinearAllocator.h" "src/PoolAllocator.h" "src/Benchmark.h" "src/Benchmark.cpp" "src/Ecs.h" "src/EcsBenchmark.h" "src/EcsBenchmark.cpp" "src/Components.h" "src/SceneLoader.cpp" "src/SceneLoader.h" "src/FileWatcher.h")
+    src/JobBenchmark.cpp
+ "src/LinearAllocator.h" "src/PoolAllocator.h" "src/Benchmark.h" "src/Benchmark.cpp" "src/Ecs.h" "src/EcsBenchmark.h" "src/EcsBenchmark.cpp" "src/Components.h" "src/SceneLoader.cpp" "src/SceneLoader.h" "src/FileWatcher.h" "src/JobSystem.h" "src/JobBenchmark.h" "src/JobBenchmark.cpp")
 
+find_package(Threads REQUIRED)
+target_link_libraries(mini_engine PRIVATE Threads::Threads)
 target_include_directories(mini_engine PRIVATE ${sdl3_SOURCE_DIR}/include)
 target_link_libraries(mini_engine PRIVATE SDL3::SDL3-static)
 target_link_libraries(mini_engine PRIVATE SDL3::SDL3-static nlohmann_json::nlohmann_json)

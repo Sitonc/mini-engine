@@ -3,6 +3,7 @@
 #include "Ecs.h"
 #include "EcsBenchmark.h"
 #include "FileWatcher.h"
+#include "JobBenchmark.h"
 #include "Log.h"
 #include "SceneLoader.h"
 #include "Window.h"
@@ -22,6 +23,11 @@ int main(int argc, char** argv)
     if (argc > 1 && std::strcmp(argv[1], "--ecs") == 0)
     {
         RunEcsBenchmark();
+        return 0;
+    }
+    if (argc > 1 && std::strcmp(argv[1], "--jobs") == 0)
+    {
+        RunJobBenchmark();
         return 0;
     }
 
