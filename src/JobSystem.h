@@ -1,4 +1,6 @@
 #pragma once
+#include "Profiler.h"
+
 #include <algorithm>
 #include <atomic>
 #include <condition_variable>
@@ -17,7 +19,7 @@ public:
         if (workers == 0)
         {
             const unsigned hc = std::thread::hardware_concurrency();
-            workers = hc > 1 ? hc - 1 : 1; // the calling thread helps too
+            workers = hc > 1 ? hc - 1 : 1; // anche il thread chiamante aiuta
         }
         for (unsigned i = 0; i < workers; ++i)
             m_threads.emplace_back([this] { WorkerLoop(); });
@@ -38,8 +40,8 @@ public:
 
     unsigned WorkerCount() const { return static_cast<unsigned>(m_threads.size()); }
 
-    // fn(begin, end) is called once per chunk, possibly on different threads.
-    // Chunks must not depend on each other. fn must not throw.
+    // fn(begin, end) viene chiamata una volta per chunk, anche su thread diversi.
+    // I chunk non devono dipendere l'uno dall'altro. fn non deve lanciare eccezioni.
     template <typename F>
     void ParallelFor(std::size_t count, std::size_t grain, F&& fn)
     {
@@ -56,6 +58,7 @@ public:
                 const std::size_t end = std::min(count, begin + grain);
                 m_queue.push([&fn, &remaining, begin, end]
                     {
+                        ZoneScopedN("chunk");
                         fn(begin, end);
                         remaining.fetch_sub(1, std::memory_order_acq_rel);
                     });
@@ -63,7 +66,7 @@ public:
         }
         m_cv.notify_all();
 
-        // Help out instead of idling until everything is finished.
+        // Aiuta a eseguire i chunk invece di restare fermo ad aspettare.
         while (remaining.load(std::memory_order_acquire) > 0)
         {
             if (!TryRunOne()) std::this_thread::yield();
@@ -86,6 +89,7 @@ private:
 
     void WorkerLoop()
     {
+        PROFILER_THREAD_NAME("Job worker");
         for (;;)
         {
             std::function<void()> job;

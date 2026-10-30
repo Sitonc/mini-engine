@@ -6,6 +6,7 @@
 #include "JobBenchmark.h"
 #include "Log.h"
 #include "SceneLoader.h"
+#include "Sim.h"
 #include "Window.h"
 #include <chrono>
 #include <cstdint>
@@ -28,6 +29,12 @@ int main(int argc, char** argv)
     if (argc > 1 && std::strcmp(argv[1], "--jobs") == 0)
     {
         RunJobBenchmark();
+        return 0;
+    }
+    if (argc > 1 && std::strcmp(argv[1], "--sim") == 0)
+    {
+        const bool parallel = argc > 2 && std::strcmp(argv[2], "parallel") == 0;
+        RunSim(parallel, 15.0f);
         return 0;
     }
 

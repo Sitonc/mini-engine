@@ -1,10 +1,15 @@
 #pragma once
+#include "JobSystem.h"
+
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <utility>
 #include <vector>
 
+// ---------------------------------------------------------------------------
+// Entity: index + generation. The generation makes stale handles detectable.
+// ---------------------------------------------------------------------------
 struct Entity
 {
     std::uint32_t index = 0xFFFFFFFF;
@@ -42,6 +47,9 @@ private:
     std::vector<std::uint32_t> m_free;
 };
 
+// ---------------------------------------------------------------------------
+// Component storage: one sparse set per component type.
+// ---------------------------------------------------------------------------
 class IPool
 {
 public:
@@ -52,9 +60,9 @@ public:
 template <typename T>
 class Pool : public IPool
 {
+public:
     static constexpr std::uint32_t kNone = 0xFFFFFFFF;
 
-public:
     T& Add(std::uint32_t e, T value)
     {
         if (e >= m_sparse.size()) m_sparse.resize(e + 1, kNone);
@@ -90,6 +98,7 @@ public:
 
     std::vector<T>& Data() { return m_data; }
     const std::vector<std::uint32_t>& Entities() const { return m_entities; }
+    const std::vector<std::uint32_t>& Sparse() const { return m_sparse; }
 
 private:
     std::vector<std::uint32_t> m_sparse;   // entity index -> dense index
@@ -97,6 +106,9 @@ private:
     std::vector<T> m_data;                 // packed components
 };
 
+// ---------------------------------------------------------------------------
+// Registry: creates entities, owns the pools, runs queries.
+// ---------------------------------------------------------------------------
 class Registry
 {
 public:
@@ -120,6 +132,7 @@ public:
     template <typename T>
     T& Get(Entity e) { return GetPool<T>().Get(e.index); }
 
+    // Runs f(A&, B&) for every entity that has both components.
     // Do not add or remove components of A or B inside the callback:
     // that would invalidate the arrays being iterated.
     template <typename A, typename B, typename F>
@@ -127,13 +140,47 @@ public:
     {
         auto& pa = GetPool<A>();
         auto& pb = GetPool<B>();
-        auto& dataA = pa.Data();
-        const auto& ents = pa.Entities();
-        for (std::size_t i = 0; i < dataA.size(); ++i)
+        A* dataA = pa.Data().data();
+        const std::uint32_t* ents = pa.Entities().data();
+        const std::size_t count = pa.Data().size();
+        B* dataB = pb.Data().data();
+        const std::uint32_t* sparseB = pb.Sparse().data();
+        const std::size_t sparseCount = pb.Sparse().size();
+
+        for (std::size_t i = 0; i < count; ++i)
         {
             const std::uint32_t e = ents[i];
-            if (pb.Has(e)) f(dataA[i], pb.Get(e));
+            if (e >= sparseCount) continue;
+            const std::uint32_t di = sparseB[e];
+            if (di != Pool<B>::kNone) f(dataA[i], dataB[di]);
         }
+    }
+
+    // Same as Each, but split across the job system.
+    // The callback may only modify the components it receives. It must not
+    // add/remove components, create/destroy entities, or write shared state.
+    template <typename A, typename B, typename F>
+    void EachParallel(JobSystem& jobs, std::size_t grain, F&& f)
+    {
+        auto& pa = GetPool<A>();
+        auto& pb = GetPool<B>();
+        A* dataA = pa.Data().data();
+        const std::uint32_t* ents = pa.Entities().data();
+        const std::size_t count = pa.Data().size();
+        B* dataB = pb.Data().data();
+        const std::uint32_t* sparseB = pb.Sparse().data();
+        const std::size_t sparseCount = pb.Sparse().size();
+
+        jobs.ParallelFor(count, grain, [&](std::size_t begin, std::size_t end)
+            {
+                for (std::size_t i = begin; i < end; ++i)
+                {
+                    const std::uint32_t e = ents[i];
+                    if (e >= sparseCount) continue;
+                    const std::uint32_t di = sparseB[e];
+                    if (di != Pool<B>::kNone) f(dataA[i], dataB[di]);
+                }
+            });
     }
 
 private:
